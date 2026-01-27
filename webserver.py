@@ -22,42 +22,45 @@ app = Flask(__name__)
 config = configparser.ConfigParser()
 config.read('.conf')
 
-if config['SYSTEM']['secret_key'].strip('"') != " ":
-    app.secret_key = config['SYSTEM']['secret_key'].strip('"')  # Needed for flashing messages
-else:
-    secret_key = str(setup2.generate.token())
-    app.secret_key = secret_key
-    config.set('SYSTEM', 'secret_key', f'"{secret_key}"')
+# Debugging: Print available sections in the config
+print(config.sections())
 
-if config['SYSTEM']['system_id'].strip('"') != " ":
-    system_id = config['SYSTEM']['system_id'].strip('"')  # Needed for flashing messages
-else:
-    system_id = str(setup2.generate.system_id())
-    config.set('SYSTEM', 'system_id', f'"{system_id}"')
+# if config['SYSTEM']['secret_key'].strip('"') != " ":
+#     app.secret_key = config['SYSTEM']['secret_key'].strip('"')  # Needed for flashing messages
+# else:
+#     secret_key = str(setup2.generate.token())
+#     app.secret_key = secret_key
+#     config.set('SYSTEM', 'secret_key', f'"{secret_key}"')
 
-global api_active
-global api_token
-global api_list
-api_active = bool(config['DEFAULT']['api_active'].strip('"'))
+# if config['SYSTEM']['system_id'].strip('"') != " ":
+#     system_id = config['SYSTEM']['system_id'].strip('"')  # Needed for flashing messages
+# else:
+#     system_id = str(setup2.generate.system_id())
+#     config.set('SYSTEM', 'system_id', f'"{system_id}"')
 
-api_config = configparser.ConfigParser()
-api_config.read('api.conf')
+# global api_active
+# global api_token
+# global api_list
+# api_active = bool(config['DEFAULT']['api_active'].strip('"'))
 
-api_list = []  # Verknüpfte Fremd-Systeme
-for api_group in api_config:
-    if api_group != "DEFAULT":
-        api_list += [{ "url": api_config[api_group]['url'].strip('"'), "token": api_config[api_group]['token'].strip('"')}]
+# api_config = configparser.ConfigParser()
+# api_config.read('api.conf')
 
-global connect2api
-global access_url
-connect2api =  config['SYSTEM']['connect2api']
-access_token = config['DEFAULT']['access_token'].strip('"')  # Remove quotes
+# api_list = []  # Verknüpfte Fremd-Systeme
+# for api_group in api_config:
+#     if api_group != "DEFAULT":
+#         api_list += [{ "url": api_config[api_group]['url'].strip('"'), "token": api_config[api_group]['token'].strip('"')}]
 
-if config['DEFAULT']['access_url'].strip('"') != "":
-    access_url = config['DEFAULT']['access_url'].strip('"')  # Remove quotes
-else:
-    access_url = "http://" +setup2.get.ip() + ":" + config['DEFAULT']['port'].strip('"')
-access_url = urllib.parse.quote(access_url)  # URL kodieren
+# global connect2api
+# global access_url
+# connect2api =  config['SYSTEM']['connect2api']
+# access_token = config['DEFAULT']['access_token'].strip('"')  # Remove quotes
+
+# if config['DEFAULT']['access_url'].strip('"') != "":
+#     access_url = config['DEFAULT']['access_url'].strip('"')  # Remove quotes
+# else:
+#     access_url = "http://" +setup2.get.ip() + ":" + config['DEFAULT']['port'].strip('"')
+# access_url = urllib.parse.quote(access_url)  # URL kodieren
 
 with open('.conf', 'w') as configfile:
     config.write(configfile)
@@ -76,20 +79,20 @@ def switch(pin):
     db.update_device_state_by_pin(pin, state)
     create_record(int(device["id"]), state)
 
-def call_api_info():
-    """Initial: hole System-IDs verbundener APIs"""
-    for api in api_list:
-        print()
-        url = api['url'] + f'/api/info?code='+ api['token']
-        response = requests.get(url)
-        response = json.loads(response.text)[0]
-        api['system_id'] = str(response['system_id'])
+# def call_api_info():
+    # """Initial: hole System-IDs verbundener APIs"""
+    # for api in api_list:
+    #     print()
+    #     url = api['url'] + f'/api/info?code='+ api['token']
+    #     response = requests.get(url)
+    #     response = json.loads(response.text)[0]
+    #     api['system_id'] = str(response['system_id'])
 
-def get_api(api_id):
-    for api in api_list:
-        if api['system_id'] == api_id:
-            return api
-    return "[{ 'response': 'error'}]"
+# def get_api(api_id):
+    # for api in api_list:
+    #     if api['system_id'] == api_id:
+    #         return api
+    # return "[{ 'response': 'error'}]"
 
 db = DBWrapper(config["DEFAULT"]["db_name"])  # SQLite Instanz
 db.init_db()
@@ -104,9 +107,9 @@ def home():
     grouped_devices = db.get_all_devices_grouped_by_room()
     all_buttons = db.get_all_buttons()
 
-    if config['SYSTEM']['connect2api'].strip('"') == "true":
-        for response in call_all_apis("json"):
-            devices += response
+    # if config['SYSTEM']['connect2api'].strip('"') == "true":
+    #     for response in call_all_apis("json"):
+    #         devices += response
 
     return render_template('index.html', devices_by_room=grouped_devices, all_devices=devices, all_button_devices=all_buttons)
 
@@ -202,12 +205,6 @@ def add_button():
     flash(f"Added button {device_name} successfully on pin {input_pin}")
     return redirect("/")
 
-
-   
-    
-
-
-
 @app.route("/room/<roomID>")
 def room_toggle(roomID):
     """Alle Geräte in Raum toggeln"""
@@ -225,7 +222,6 @@ def stats():
     history = db.get_history()
     return render_template("stats.html", stats=stats, history_by_minute=history)
 
-
 @app.route('/<all>')
 def catch(all = None):
     return render_template('error.html')
@@ -237,134 +233,134 @@ def error():
 #--------------------------------------------------------------
 # call_api's
 
-def call_all_apis(url_part):
-    """Fragt alle verbundenen APIs ab (GET)"""
-    if api_active == True:
-        full_response = []
-        for api in api_list:
-            try:
-                url = api['url'] + f'/api/get/{url_part}?code='+ api['token']  
-                response = requests.get(url)
-                if str(response) == "<Response [401]>":
-                    flash( '"'+ api['url'] +'" Authorisation failed', 'error')
-                else:
-                    full_response += [json.loads(response.text)]
-            except:
-                flash( api['url'] +' is not available', 'error')
-                pass
+# def call_all_apis(url_part):
+#     """Fragt alle verbundenen APIs ab (GET)"""
+#     if api_active == True:
+#         full_response = []
+#         for api in api_list:
+#             try:
+#                 url = api['url'] + f'/api/get/{url_part}?code='+ api['token']  
+#                 response = requests.get(url)
+#                 if str(response) == "<Response [401]>":
+#                     flash( '"'+ api['url'] +'" Authorisation failed', 'error')
+#                 else:
+#                     full_response += [json.loads(response.text)]
+#             except:
+#                 flash( api['url'] +' is not available', 'error')
+#                 pass
             
-        return full_response
+#         return full_response
     
-def call_api(url_part, use_api):
-    """Einzel-API Anfrage"""
-    if api_active == True:
-        url = use_api['url'] + f'/api/{url_part}?code='+use_api['token']  
-        response = json.loads(requests.get(url).text)[0]
-        return response
+# def call_api(url_part, use_api):
+#     """Einzel-API Anfrage"""
+#     if api_active == True:
+#         url = use_api['url'] + f'/api/{url_part}?code='+use_api['token']  
+#         response = json.loads(requests.get(url).text)[0]
+#         return response
 
-@app.route('/api/device/<pin>/', methods=['GET'])
-def call_api_device(pin):
-    """Geräte-Detail (fremdes System)"""
-    api_id = request.args.get('system_id')
-    api_call = get_api(api_id)
-    response = call_api(f"get/device/{pin}", api_call)
-    return render_template('device.html', device=response)
+# @app.route('/api/device/<pin>/', methods=['GET'])
+# def call_api_device(pin):
+#     """Geräte-Detail (fremdes System)"""
+#     api_id = request.args.get('system_id')
+#     api_call = get_api(api_id)
+#     response = call_api(f"get/device/{pin}", api_call)
+#     return render_template('device.html', device=response)
     
 
-@app.route('/api/switch/<pin>/', methods=['GET'])
-def call_api_device_switch(pin):
-    """Remote: Toggle Gerät"""
-    api_id = request.args.get('system_id')
-    api_call = get_api(api_id)
-    response = call_api(f"set/switch/{pin}", api_call)
-    return redirect(f'/api/device/'+str(response['pin'])+'?system_id='+str(response['system_id']))
+# @app.route('/api/switch/<pin>/', methods=['GET'])
+# def call_api_device_switch(pin):
+#     """Remote: Toggle Gerät"""
+#     api_id = request.args.get('system_id')
+#     api_call = get_api(api_id)
+#     response = call_api(f"set/switch/{pin}", api_call)
+#     return redirect(f'/api/device/'+str(response['pin'])+'?system_id='+str(response['system_id']))
 
-@app.route('/api/unset/<pin>/', methods=['GET'])
-def call_unset_device(pin):
-    """Remote: Entfernt Gerät"""
-    api_id = request.args.get('system_id')
-    api_call = get_api(api_id)
-    pin = int(pin)
-    if call_api(f"set/unset/{pin}", api_call)['response'] == 'success':
-        flash(f'Pin "{pin}" removed successfully.', 'success')
-    else:
-        flash(f'Pin "{pin}" could not be removed.', 'error')
+# @app.route('/api/unset/<pin>/', methods=['GET'])
+# def call_unset_device(pin):
+#     """Remote: Entfernt Gerät"""
+#     api_id = request.args.get('system_id')
+#     api_call = get_api(api_id)
+#     pin = int(pin)
+#     if call_api(f"set/unset/{pin}", api_call)['response'] == 'success':
+#         flash(f'Pin "{pin}" removed successfully.', 'success')
+#     else:
+#         flash(f'Pin "{pin}" could not be removed.', 'error')
 
-    return redirect('/')
+#     return redirect('/')
 
-#--------------------------------------------------------------
-# api response
+# #--------------------------------------------------------------
+# # api response
 
-@app.route('/api/info/')
-def info():
-    return '[{ "system_id": "'+system_id+'", "version": "0.0.1", "allow_connection": "'+str(api_active)+'"}]'
+# @app.route('/api/info/')
+# def info():
+#     return '[{ "system_id": "'+system_id+'", "version": "0.0.1", "allow_connection": "'+str(api_active)+'"}]'
 
-def auth_check(code):
-    """Tokenprüfung"""
-    if code == access_token:
-        return True
-    else:
-        return False
+# def auth_check(code):
+#     """Tokenprüfung"""
+#     if code == access_token:
+#         return True
+#     else:
+#         return False
 
-@app.route('/api/get/json/')
-def home_json():
-    """API: Alle Geräte (JSON)"""
-    code = request.args.get('code')
-    if auth_check(code):
-        devices = FA.get_devices()
-        for device in devices:
-            try:
-                device['state'] = LEDC.state(device['pin'])
-            except:
-                device['state'] = False
-            device['system_id'] = system_id
-        return devices
-    else:
-        abort(401)
+# @app.route('/api/get/json/')
+# def home_json():
+#     """API: Alle Geräte (JSON)"""
+#     code = request.args.get('code')
+#     if auth_check(code):
+#         devices = FA.get_devices()
+#         for device in devices:
+#             try:
+#                 device['state'] = LEDC.state(device['pin'])
+#             except:
+#                 device['state'] = False
+#             device['system_id'] = system_id
+#         return devices
+#     else:
+#         abort(401)
 
-@app.route('/api/get/device/<pin>/')
-def api_device(pin):
-    """API: Einzel-Gerät Status"""
-    code = request.args.get('code')
-    if auth_check(code):
-        pin = int(pin)
-        if LEDC.get.led(pin):
-            return '[{ "devicename": "API", "pin": '+str(pin)+', "device_type": "output", "state": true, "system_id": "'+system_id+'" }]'
-        else:
-            return '[{ "devicename": "API", "pin": '+str(pin)+', "device_type": "output", "state": false, "system_id": "'+system_id+'" }]'
-    abort(401)
+# @app.route('/api/get/device/<pin>/')
+# def api_device(pin):
+#     """API: Einzel-Gerät Status"""
+#     code = request.args.get('code')
+#     if auth_check(code):
+#         pin = int(pin)
+#         if LEDC.get.led(pin):
+#             return '[{ "devicename": "API", "pin": '+str(pin)+', "device_type": "output", "state": true, "system_id": "'+system_id+'" }]'
+#         else:
+#             return '[{ "devicename": "API", "pin": '+str(pin)+', "device_type": "output", "state": false, "system_id": "'+system_id+'" }]'
+#     abort(401)
 
-@app.route('/api/set/switch/<pin>/')
-def api_device_switch(pin):
-    """API: Toggle Gerät"""
-    code = request.args.get('code')
-    if auth_check(code):
-        pin = int(pin)
-        device = db.get_device(pin)
-        if device is None:
-            return '[{ "state": false}]'
-        LEDC.set.switch(pin)
-        return '[{ "pin": '+str(pin)+', "system_id": "'+system_id+'" }]'
-    return "[{ 'error': 'Authorisation failed' }]"
+# @app.route('/api/set/switch/<pin>/')
+# def api_device_switch(pin):
+#     """API: Toggle Gerät"""
+#     code = request.args.get('code')
+#     if auth_check(code):
+#         pin = int(pin)
+#         device = db.get_device(pin)
+#         if device is None:
+#             return '[{ "state": false}]'
+#         LEDC.set.switch(pin)
+#         return '[{ "pin": '+str(pin)+', "system_id": "'+system_id+'" }]'
+#     return "[{ 'error': 'Authorisation failed' }]"
 
-@app.route('/api/set/unset/<pin>')
-def api_set_unset_device(pin):
-    """API: Gerät entfernen"""
-    code = request.args.get('code')
-    if auth_check(code):
-        pin = int(pin)
-        call_url = request.args.get('url')
-        try:
-            LEDC.clear_led(pin)
-            FA.remove_device(pin)
-            return [{"response": "success"}]
-        except:
-            return [{"response": "error"}]
-    return "[{ 'error': 'Authorisation failed' }]"
+# @app.route('/api/set/unset/<pin>')
+# def api_set_unset_device(pin):
+#     """API: Gerät entfernen"""
+#     code = request.args.get('code')
+#     if auth_check(code):
+#         pin = int(pin)
+#         call_url = request.args.get('url')
+#         try:
+#             LEDC.clear_led(pin)
+#             FA.remove_device(pin)
+#             return [{"response": "success"}]
+#         except:
+#             return [{"response": "error"}]
+#     return "[{ 'error': 'Authorisation failed' }]"
 
-#--------------------------------------------------------------
+# #--------------------------------------------------------------
 
-call_api_info()
+# call_api_info()
 
 def start():
     """Startet Flask (extern aufrufbar)"""

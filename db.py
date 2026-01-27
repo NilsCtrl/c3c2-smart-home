@@ -42,7 +42,7 @@ class DBWrapper:
         self.cur.execute("""
             CREATE TABLE IF NOT EXISTS logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                timestamp DATETIME DEFAULT (datetime('now', 'localtime')),
                 type TEXT NOT NULL,
                 code TEXT NOT NULL,
                 message TEXT NOT NULL,
@@ -56,7 +56,9 @@ class DBWrapper:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 deviceID INTEGER,
-                state INTEGER,
+                temperature REAL,
+                humidity REAL,
+                pressure REAL,
                 FOREIGN KEY(deviceID) REFERENCES device(id)
             );
         """)
@@ -198,11 +200,12 @@ class DBWrapper:
         """).fetchall()
         return result
     
-    def create_record(self, deviceID, state):
+    def create_record(self, deviceID, temp, hum, pres):
         """Historieneintrag anlegen"""
         self.cur.execute("""
-            INSERT INTO history (deviceID, state) VALUES (?, ?)
-        """, (deviceID, state, ))
+                INSERT INTO history (deviceID, temperature, humidity, pressure)
+                VALUES (?, ?, ?, ?)
+            """, (deviceID, temp, hum, pres))
 
         self.connection.commit()
         return True
@@ -239,10 +242,46 @@ class DBWrapper:
         return  self.cur.execute("""
             SELECT * FROM device WHERE device_type_id=2;
         """).fetchall()
+    
+    def log_sensor_data(self, device_id, temperature, humidity, pressure):
+        """Logs sensor data into the history table."""
+        self.cur.execute("""
+            INSERT INTO history (deviceID, temperature, humidity, pressure) VALUES (?, ?, ?, ?)
+        """, (device_id, temperature, humidity, pressure))
+        self.connection.commit()
         
+    def get_all_history(self):
+        """Ruft alle Historieneinträge ab."""
+        history_entries = self.cur.execute("""
+            SELECT 
+                id, 
+                datetime(timestamp, 'localtime'), 
+                deviceID, 
+                temperature, 
+                humidity, 
+                pressure 
+            FROM history 
+            ORDER BY timestamp DESC;
+        """).fetchall()
+        return history_entries
+
 
     def close(self):
         """DB-Verbindung schließen"""
         if self.connection:
             self.connection.close()
 
+
+if __name__ == "__main__":
+    # 1. Objekt erstellen
+    db = DBWrapper("c2c1.db")
+    
+    # 2. Verbindung herstellen und Tabellen anlegen
+    db.init_db()
+    db.init_tables()
+    
+    # 3. Testweise ein Gerät hinzufügen
+    db.add_device("Luftsensor", 17, 1)
+    
+    print("Datenbank wurde initialisiert und Test-Gerät angelegt.")
+    db.close()

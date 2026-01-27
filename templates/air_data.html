@@ -1,0 +1,81 @@
+<!-- templates/air_sensor.html -->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historie des Luftsensors</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            position: relative;
+            background-color: #1e1e1e;
+            padding: 20px;
+            text-align: center;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 2;
+        }
+        .header h1 {
+            margin: 0;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+        th {
+            background-color: #1f67aa;
+        }
+        tr:hover {
+            background-color: #1e1e1e;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Historie des Luftsensors</h1>
+    </div>
+
+    <div class="container">
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Zeitstempel</th>
+                <th>Temperatur (C°)</th>
+                <th>Feuchtigkeit (%)</th>
+                <th>Druck (hPa)</th>
+            </tr>
+            {% for entry in history %}
+            <tr>
+                <td>{{ entry[0] }}</td>
+                <td>{{ entry[1] }}</td>
+                <td {% if entry[3] > 28 %}style="color: orange; font-weight: bold;"{% endif %}>
+                    {{ entry[3] }}
+                </td>
+                <td>{{ entry[4] }}</td>
+                <td>{{ entry[5] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+</html>
