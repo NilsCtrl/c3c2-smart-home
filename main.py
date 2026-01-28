@@ -1,4 +1,4 @@
 import webserver
 
-# Einstiegspunkt: startet direkt Webserver (siehe webserver.start())
-webserver()
+# Einstiegspunkt: startet direkt Webserver
+webserver.start()

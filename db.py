@@ -56,13 +56,22 @@ class DBWrapper:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 deviceID INTEGER,
+                state INTEGER,
+                FOREIGN KEY(deviceID) REFERENCES device(id)
+            );
+        """)
+        
+        self.cur.execute("""
+            CREATE TABLE IF NOT EXISTS air_measurement (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME DEFAULT (datetime('now', 'localtime')),
+                deviceID INTEGER,
                 temperature REAL,
                 humidity REAL,
                 pressure REAL,
                 FOREIGN KEY(deviceID) REFERENCES device(id)
             );
         """)
-
         self.cur.execute("""
             CREATE TABLE IF NOT EXISTS device_type (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -200,15 +209,32 @@ class DBWrapper:
         """).fetchall()
         return result
     
-    def create_record(self, deviceID, temp, hum, pres):
+    def create_record(self, deviceID, state):
         """Historieneintrag anlegen"""
         self.cur.execute("""
-                INSERT INTO history (deviceID, temperature, humidity, pressure)
-                VALUES (?, ?, ?, ?)
-            """, (deviceID, temp, hum, pres))
-
+            INSERT INTO history (deviceID, state) VALUES (?, ?)
+        """, (deviceID, state, ))
         self.connection.commit()
         return True
+    
+    def create_air_measurement(self, deviceID, temperature, humidity, pressure):
+        self.cur.execute("""
+            INSERT INTO air_measurement (deviceID, temperature, humidity, pressure) VALUES (?, ?, ?, ?)
+        """, (deviceID, temperature, humidity, pressure))
+        self.connection.commit()
+    
+    def get_air_measurements(self):
+      return self.cur.execute("""
+        SELECT
+            id,
+            datetime(timestamp, 'localtime') as timestamp, 
+            deviceID,
+            temperature, 
+            humidity, 
+            pressure 
+        FROM air_measurement
+        ORDER BY timestamp DESC;
+    """).fetchall()
     
     def get_num_state_updates(self):
         """Anzahl Zustandsänderungen (COUNT)"""
@@ -216,6 +242,7 @@ class DBWrapper:
             SELECT COUNT(deviceID) FROM history;
         """)
         return num_updates
+    
     def get_history(self):
         """History gruppiert nach Minute"""
         history_entries = self.cur.execute("""
@@ -242,29 +269,6 @@ class DBWrapper:
         return  self.cur.execute("""
             SELECT * FROM device WHERE device_type_id=2;
         """).fetchall()
-    
-    def log_sensor_data(self, device_id, temperature, humidity, pressure):
-        """Logs sensor data into the history table."""
-        self.cur.execute("""
-            INSERT INTO history (deviceID, temperature, humidity, pressure) VALUES (?, ?, ?, ?)
-        """, (device_id, temperature, humidity, pressure))
-        self.connection.commit()
-        
-    def get_all_history(self):
-        """Ruft alle Historieneinträge ab."""
-        history_entries = self.cur.execute("""
-            SELECT 
-                id, 
-                datetime(timestamp, 'localtime'), 
-                deviceID, 
-                temperature, 
-                humidity, 
-                pressure 
-            FROM history 
-            ORDER BY timestamp DESC;
-        """).fetchall()
-        return history_entries
-
 
     def close(self):
         """DB-Verbindung schließen"""
@@ -279,9 +283,8 @@ if __name__ == "__main__":
     # 2. Verbindung herstellen und Tabellen anlegen
     db.init_db()
     db.init_tables()
+
+    db.add_device(device_name="Luftsensor", pin="15", device_type=1, secondary_pin=0, room_id=1)
     
-    # 3. Testweise ein Gerät hinzufügen
-    db.add_device("Luftsensor", 17, 1)
-    
-    print("Datenbank wurde initialisiert und Test-Gerät angelegt.")
+    print("Datenbank wurde initialisiert.")
     db.close()

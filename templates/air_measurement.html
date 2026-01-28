@@ -1,10 +1,10 @@
-<!-- templates/air_sensor.html -->
+<!-- templates/air_measurement.html -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Historie des Luftsensors</title>
+    <title>Air Measurements</title>
     <style>
         body {
             background-color: #121212;
@@ -48,31 +48,45 @@
         tr:hover {
             background-color: #1e1e1e;
         }
+        .room-button {
+            background-color: #1b1b1d;
+            border: 1px solid #2f3031;
+            color: #ffffff;
+            border-radius: 8px;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Historie des Luftsensors</h1>
+        <div class="left">
+            <h1>Air Measurements</h1>
+        </div>
+        <div class="right">
+            <button class="room-button" onclick="window.location.href='/'">Back</button>
+        </div>
     </div>
 
     <div class="container">
         <table>
             <tr>
                 <th>ID</th>
-                <th>Zeitstempel</th>
+                <th>Zeitpunkt</th>
                 <th>Temperatur (C°)</th>
                 <th>Feuchtigkeit (%)</th>
-                <th>Druck (hPa)</th>
+                <th>Luftdruck (hPa)</th>
             </tr>
             {% for entry in history %}
             <tr>
-                <td>{{ entry[0] }}</td>
-                <td>{{ entry[1] }}</td>
-                <td {% if entry[3] > 28 %}style="color: orange; font-weight: bold;"{% endif %}>
-                    {{ entry[3] }}
+                <td>{{ entry.id }}</td>
+                <td>{{ entry.timestamp }}</td>
+                <td {% if entry.temperature > 28 %}style="color: orange; font-weight: bold;"{% endif %}>
+                    {{ entry.temperature }}
                 </td>
-                <td>{{ entry[4] }}</td>
-                <td>{{ entry[5] }}</td>
+                <td>{{ entry.humidity }}</td>
+                <td>{{ entry.pressure }}</td>
             </tr>
             {% endfor %}
         </table>
